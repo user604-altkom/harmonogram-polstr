@@ -116,10 +116,11 @@ function obliczRateRowna(saldo: number, stopaMiesieczna: number, liczbaRat: numb
 }
 
 function stopaDlaDaty(seria: readonly WpisSerii[], data: string): number {
-  let znalezionaStopa = seria[0]?.stopa;
-  if (znalezionaStopa === undefined) {
-    throw new Error('brak wartości wskaźnika');
+  const pierwsza = seria[0];
+  if (!pierwsza || pierwsza.od > data) {
+    throw new Error('brak wartości wskaźnika dla daty');
   }
+  let znalezionaStopa = pierwsza.stopa;
 
   for (const wpis of seria) {
     if (wpis.od > data) {
