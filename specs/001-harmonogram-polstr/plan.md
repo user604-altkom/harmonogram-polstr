@@ -75,7 +75,7 @@ src/
     └── harmonogram.ts
 
 tests/
-└── harmonogram.test.ts
+└── smoke.test.ts
 ```
 
 **Structure Decision**: Zachowujemy istniejący szkielet Next.js. Domena pozostaje w `src/domena/`,
