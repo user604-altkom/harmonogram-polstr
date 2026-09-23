@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { policzHarmonogram, type ParametryKredytu } from '../../../src/domena/harmonogram';
+import { seriaWskaznika } from '../../../src/dane/wskazniki';
+import { policzHarmonogram, przeliczZloteNaGrosze, type Nadplata, type ParametryKredytu } from '../../../src/domena/harmonogram';
 
 // Route handler jest cienki: parsuje parametry z query string, woła domenę, zwraca JSON.
 // Żadnych obliczeń finansowych w tym pliku. Przeliczenie jednostek wejścia
@@ -22,15 +23,59 @@ function parsujParametry(szukane: URLSearchParams): ParametryKredytu | string {
   if (wskaznik !== 'POLSTR_1M' && wskaznik !== 'WIBOR_3M') return 'wskaznik: POLSTR_1M albo WIBOR_3M';
   if (typRat !== 'rowne' && typRat !== 'malejace') return 'typRat: rowne albo malejace';
   if (!/^\d{4}-\d{2}-\d{2}$/.test(pierwszaRata)) return 'pierwszaRata: data YYYY-MM-DD';
+  const nadplaty = parsujNadplaty(szukane);
+  if (typeof nadplaty === 'string') return nadplaty;
 
   return {
-    kwotaGr: Math.round(kwota * 100),
+    kwotaGr: przeliczZloteNaGrosze(kwota),
     liczbaRat,
     marza: marza / 100,
     wskaznik,
     typRat,
     pierwszaRata,
+    seria: seriaWskaznika(wskaznik),
+    nadplaty,
   };
+}
+
+function parsujNadplaty(szukane: URLSearchParams): ParametryKredytu['nadplaty'] | string {
+  const surowe = szukane.get('nadplaty');
+  if (!surowe) return [];
+
+  let dane: unknown;
+  try {
+    dane = JSON.parse(surowe);
+  } catch {
+    return 'nadplaty: oczekiwany JSON z listą nadpłat';
+  }
+
+  if (!Array.isArray(dane)) return 'nadplaty: oczekiwana lista';
+
+  const nadplaty: Nadplata[] = [];
+  for (const pozycja of dane) {
+    if (!jestRekordem(pozycja)) {
+      return 'nadplaty: każda pozycja musi być obiektem';
+    }
+    const miesiac = Number(pozycja.miesiac);
+    const kwota = Number(pozycja.kwota);
+    const tryb = pozycja.tryb;
+    if (!Number.isInteger(miesiac) || miesiac <= 0) {
+      return 'nadplaty: miesiąc musi być dodatnią liczbą całkowitą';
+    }
+    if (!Number.isFinite(kwota) || kwota <= 0) {
+      return 'nadplaty: kwota musi być dodatnią liczbą w złotych';
+    }
+    if (tryb !== 'obnizRate' && tryb !== 'skrocOkres') {
+      return 'nadplaty: tryb musi mieć wartość obnizRate albo skrocOkres';
+    }
+    nadplaty.push({ miesiac, kwotaGr: przeliczZloteNaGrosze(kwota), tryb });
+  }
+
+  return nadplaty;
+}
+
+function jestRekordem(wartosc: unknown): wartosc is Record<string, unknown> {
+  return typeof wartosc === 'object' && wartosc !== null && !Array.isArray(wartosc);
 }
 
 export function GET(request: Request) {
