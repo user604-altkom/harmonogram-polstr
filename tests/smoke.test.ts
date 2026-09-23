@@ -102,6 +102,43 @@ describe('domena', () => {
     expect(wynik.raty[2]?.czescOdsetkowa).toBe(40_000);
   });
 
+  it('obsługuje nadpłatę w trybie skrócenia okresu', () => {
+    const wynik = policzHarmonogram({
+      kwotaGr: 120_000_00,
+      liczbaRat: 6,
+      marza: 0,
+      typRat: 'rowne',
+      wskaznik: 'POLSTR_1M',
+      pierwszaRata: '2026-01-01',
+      seria: [{ od: '2026-01-01', stopa: 0.12 }],
+      nadplaty: [{ miesiac: 2, kwotaGr: 20_000_00, tryb: 'skrocOkres' }],
+    });
+
+    expect(wynik.raty).toHaveLength(5);
+    expect(wynik.raty[1]?.czescKapitalowa).toBe(3_970_086);
+    expect(wynik.raty.at(-1)?.rata).toBe(2_060_059);
+    expect(wynik.raty.at(-1)?.saldoPoSplacie).toBe(0);
+  });
+
+  it('obsługuje nadpłatę w trybie obniżenia raty', () => {
+    const wynik = policzHarmonogram({
+      kwotaGr: 120_000_00,
+      liczbaRat: 6,
+      marza: 0,
+      typRat: 'rowne',
+      wskaznik: 'POLSTR_1M',
+      pierwszaRata: '2026-01-01',
+      seria: [{ od: '2026-01-01', stopa: 0.12 }],
+      nadplaty: [{ miesiac: 2, kwotaGr: 20_000_00, tryb: 'obnizRate' }],
+    });
+
+    expect(wynik.raty).toHaveLength(6);
+    expect(wynik.raty[1]?.czescKapitalowa).toBe(3_970_086);
+    expect(wynik.raty[2]?.rata).toBe(1_558_018);
+    expect(wynik.raty.at(-1)?.rata).toBe(1_558_019);
+    expect(wynik.raty.at(-1)?.saldoPoSplacie).toBe(0);
+  });
+
   it('testy działają w strefie Europe/Warsaw', () => {
     expect(process.env.TZ).toBe('Europe/Warsaw');
   });
