@@ -44,8 +44,8 @@
 
 ### Tests for User Story 1
 
-- [X] T005 [P] [US1] Dodaj test liczby kontrolnej rat równych przy stałej stopie w `tests/harmonogram.test.ts`
-- [X] T006 [P] [US1] Dodaj test sumy części kapitałowych po zaokrągleniach w `tests/harmonogram.test.ts`
+- [X] T005 [P] [US1] Dodaj test liczby kontrolnej rat równych przy stałej stopie w `tests/smoke.test.ts`
+- [X] T006 [P] [US1] Dodaj test sumy części kapitałowych po zaokrągleniach w `tests/smoke.test.ts`
 
 ### Implementation for User Story 1
 
