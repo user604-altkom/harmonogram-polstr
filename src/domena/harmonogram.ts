@@ -13,11 +13,18 @@ export interface ParametryKredytu {
   /** Data pierwszej raty w formacie YYYY-MM-DD. */
   pierwszaRata: string;
   seria?: readonly WpisSerii[];
+  nadplaty?: readonly Nadplata[];
 }
 
 export interface WpisSerii {
   od: string;
   stopa: number;
+}
+
+export interface Nadplata {
+  miesiac: number;
+  kwotaGr: number;
+  tryb: 'obnizRate' | 'skrocOkres';
 }
 
 export interface RataHarmonogramu {
@@ -61,13 +68,32 @@ export function policzHarmonogram(parametry: ParametryKredytu): WynikHarmonogram
     }
     const czescOdsetkowa = zaokraglijDoGroszy(saldo * stopaMiesieczna);
     const ostatniaRata = numer === parametry.liczbaRat;
-    const czescKapitalowa = parametry.typRat === 'rowne'
+    const kapitalBezNadplaty = parametry.typRat === 'rowne'
       ? (ostatniaRata ? saldo : Math.min(saldo, rataBazowa - czescOdsetkowa))
       : (ostatniaRata ? saldo : Math.min(saldo, kapitalMalejacy));
-    saldo -= czescKapitalowa;
+    let czescKapitalowa = kapitalBezNadplaty;
+    saldo -= kapitalBezNadplaty;
+
+    for (const nadplata of parametry.nadplaty ?? []) {
+      if (nadplata.miesiac !== numer || saldo <= 0) continue;
+      const kwotaNadplaty = Math.min(saldo, nadplata.kwotaGr);
+      saldo -= kwotaNadplaty;
+      czescKapitalowa += kwotaNadplaty;
+      if (nadplata.tryb === 'obnizRate') {
+        poprzedniaStopaMiesieczna = undefined;
+      }
+    }
+
     const rata = czescKapitalowa + czescOdsetkowa;
 
-    raty.push({ numer, data, czescKapitalowa, czescOdsetkowa, rata, saldoPoSplacie: saldo });
+    raty.push({
+      numer,
+      data,
+      czescKapitalowa,
+      czescOdsetkowa,
+      rata,
+      saldoPoSplacie: saldo,
+    });
   }
 
   return {
