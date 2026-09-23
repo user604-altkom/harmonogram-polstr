@@ -70,6 +70,38 @@ describe('domena', () => {
     ]);
   });
 
+  it('przelicza ratę równą po zmianie wskaźnika w trakcie spłaty', () => {
+    const wynik = policzHarmonogram({
+      kwotaGr: 120_000_00,
+      liczbaRat: 4,
+      marza: 0,
+      typRat: 'rowne',
+      wskaznik: 'POLSTR_1M',
+      pierwszaRata: '2026-01-01',
+      seria: [
+        { od: '2026-01-01', stopa: 0.12 },
+        { od: '2026-03-01', stopa: 0.24 },
+      ],
+    });
+
+    expect(wynik.raty.map((rata) => rata.czescOdsetkowa)).toEqual([120_000, 90_446, 121_194, 61_197]);
+    expect(wynik.raty.map((rata) => rata.rata)).toEqual([3_075_373, 3_075_373, 3_121_045, 3_121_046]);
+  });
+
+  it('stosuje ostatnią znaną wartość wskaźnika po końcu serii', () => {
+    const wynik = policzHarmonogram({
+      kwotaGr: 120_000_00,
+      liczbaRat: 3,
+      marza: 0,
+      typRat: 'malejace',
+      wskaznik: 'POLSTR_1M',
+      pierwszaRata: '2026-01-01',
+      seria: [{ od: '2026-01-01', stopa: 0.12 }],
+    });
+
+    expect(wynik.raty[2]?.czescOdsetkowa).toBe(40_000);
+  });
+
   it('testy działają w strefie Europe/Warsaw', () => {
     expect(process.env.TZ).toBe('Europe/Warsaw');
   });
