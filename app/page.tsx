@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type TypRat = 'rowne' | 'malejace';
 type Wskaznik = 'POLSTR_1M' | 'WIBOR_3M';
@@ -37,6 +37,13 @@ interface WynikApi {
   sumaOdsetek: number;
 }
 
+interface KawalekKonfetti {
+  id: number;
+  lewo: number;
+  emoji: string;
+  opoznienie: number;
+}
+
 interface WierszTabeli {
   numer: string;
   data: string;
@@ -60,6 +67,72 @@ const POCZATKOWE_NADPLATY: NadplataFormularza[] = [
   { id: 2, miesiac: '60', kwota: '50000', tryb: 'obnizRate' },
 ];
 
+const ZABAWNE_TEKSTY_LICZENIA = [
+  'Liczenie...',
+  'Papuga księgowa liczy odsetki...',
+  'Kalkulator się rozgrzewa...',
+  'Negocjujemy z bankiem...',
+  'Prawie gotowe, jeszcze grosik...',
+];
+
+function useZabawnyTekstLiczenia(aktywne: boolean): string {
+  const [indeks, ustawIndeks] = useState(0);
+
+  useEffect(() => {
+    if (!aktywne) return;
+    const interwal = setInterval(() => {
+      ustawIndeks((obecny) => (obecny + 1) % ZABAWNE_TEKSTY_LICZENIA.length);
+    }, 700);
+    return () => clearInterval(interwal);
+  }, [aktywne]);
+
+  return ZABAWNE_TEKSTY_LICZENIA[indeks] ?? 'Liczenie...';
+}
+
+function ciekawostkaOOdsetkach(sumaOdsetekGr: number): string {
+  const sumaZl = sumaOdsetekGr / 100;
+  if (sumaZl <= 0) return '';
+  const CENA_IPHONE = 5000;
+  const CENA_KAWY = 15;
+  const liczbaIphonow = sumaZl / CENA_IPHONE;
+  if (liczbaIphonow >= 1) {
+    return `💡 Suma odsetek starczyłaby na ${Math.round(liczbaIphonow)} nowych iPhone'ów (~${CENA_IPHONE.toLocaleString('pl-PL')} zł/szt.)`;
+  }
+  const liczbaKaw = Math.round(sumaZl / CENA_KAWY);
+  return `💡 Suma odsetek starczyłaby na ${liczbaKaw.toLocaleString('pl-PL')} kaw na wynos (~${CENA_KAWY} zł/szt.)`;
+}
+
+function useAnimowanaWartosc(docelowa: number, trwanieMs = 500): number {
+  const [wartosc, ustawWartosc] = useState(docelowa);
+  const poprzedniaRef = useRef(docelowa);
+
+  useEffect(() => {
+    const start = poprzedniaRef.current;
+    const delta = docelowa - start;
+    if (delta === 0) {
+      ustawWartosc(docelowa);
+      return;
+    }
+    const czasStartu = performance.now();
+    let klatka: number;
+
+    function krok(teraz: number) {
+      const postep = Math.min((teraz - czasStartu) / trwanieMs, 1);
+      ustawWartosc(start + delta * postep);
+      if (postep < 1) {
+        klatka = requestAnimationFrame(krok);
+      } else {
+        poprzedniaRef.current = docelowa;
+      }
+    }
+
+    klatka = requestAnimationFrame(krok);
+    return () => cancelAnimationFrame(klatka);
+  }, [docelowa, trwanieMs]);
+
+  return wartosc;
+}
+
 export default function Strona() {
   const [formularz, ustawFormularz] = useState<Formularz>(POCZATKOWY_FORMULARZ);
   const [nadplaty, ustawNadplaty] = useState<NadplataFormularza[]>(POCZATKOWE_NADPLATY);
@@ -70,6 +143,38 @@ export default function Strona() {
   const [zapytanie, ustawZapytanie] = useState('');
   const [widok, ustawWidok] = useState<WidokTabeli>('miesieczny');
   const [zmienionePoPoliczeniu, ustawZmienionePoPoliczeniu] = useState(false);
+  const [toast, ustawToast] = useState<string | null>(null);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [konfetti, ustawKonfetti] = useState<KawalekKonfetti[]>([]);
+  const konfettiTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+      if (konfettiTimeoutRef.current) clearTimeout(konfettiTimeoutRef.current);
+    };
+  }, []);
+
+  function pokazToast(tekst: string) {
+    ustawToast(tekst);
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    toastTimeoutRef.current = setTimeout(() => ustawToast(null), 2500);
+  }
+
+  function uruchomKonfetti() {
+    const emotki = ['🎉', '💸', '🪙', '✨', '💰'];
+    const nowe = Array.from({ length: 18 }, (_, indeks) => ({
+      id: Date.now() + indeks,
+      lewo: Math.random() * 100,
+      emoji: emotki[Math.floor(Math.random() * emotki.length)] ?? '🎉',
+      opoznienie: Math.random() * 0.3,
+    }));
+    ustawKonfetti(nowe);
+    if (konfettiTimeoutRef.current) clearTimeout(konfettiTimeoutRef.current);
+    konfettiTimeoutRef.current = setTimeout(() => ustawKonfetti([]), 1800);
+  }
+
+  const tekstLiczenia = useZabawnyTekstLiczenia(ladowanie);
 
   function aktualizujFormularz<Klucz extends keyof Formularz>(klucz: Klucz, wartosc: Formularz[Klucz]) {
     ustawFormularz((obecny) => ({ ...obecny, [klucz]: wartosc }));
@@ -133,6 +238,7 @@ export default function Strona() {
       }
       ustawWynik(dane);
       ustawZmienionePoPoliczeniu(false);
+      uruchomKonfetti();
     } catch {
       ustawBlad('Nie udało się połączyć z API harmonogramu.');
     } finally {
@@ -162,6 +268,7 @@ export default function Strona() {
     link.click();
     link.remove();
     URL.revokeObjectURL(link.href);
+    pokazToast(`Pobrano ${link.download}`);
   }
 
   const pierwszaRata = wynik?.raty[0];
@@ -169,9 +276,18 @@ export default function Strona() {
   const wiersze = wynik ? przygotujWiersze(wynik.raty, widok) : [];
   const sumaKapitalu = wynik?.raty.reduce((suma, rata) => suma + rata.czescKapitalowa, 0) ?? 0;
   const sumaRat = wynik?.raty.reduce((suma, rata) => suma + rata.rata, 0) ?? 0;
+  const aktywneMiesiaceNadplat = nadplaty
+    .map((nadplata) => Number(nadplata.miesiac))
+    .filter((miesiac) => Number.isInteger(miesiac) && miesiac > 0);
 
   return (
-    <main className="min-h-screen bg-[#161826] text-[#e9e9ed]">
+    <main
+      className="min-h-screen bg-[#161826] text-[#e9e9ed]"
+      style={{
+        backgroundImage:
+          'radial-gradient(circle at 12% -10%, rgba(145,132,217,0.10), transparent 45%), radial-gradient(circle at 100% 110%, rgba(145,132,217,0.07), transparent 40%)',
+      }}
+    >
       <header className="flex flex-wrap items-center gap-3 px-5 py-3">
         <span className="mr-auto text-[15px] font-semibold">Kalkulator harmonogramu spłat</span>
         <span className="rounded-md bg-[#3f424d] px-3 py-1 text-[11px] text-[#f3f5fe]">Kredyt hipoteczny</span>
@@ -255,7 +371,11 @@ export default function Strona() {
             <div className="mt-1 flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <span className="mr-auto text-[10px] uppercase tracking-[0.1em] text-[#d2cefd]">Nadpłaty</span>
-                <button className="rounded-md px-2 py-1 text-xs text-[#d2cefd] hover:bg-white/5" type="button" onClick={dodajNadplate}>
+                <button
+                  className="rounded-md px-2 py-1 text-xs text-[#d2cefd] transition-colors hover:bg-white/5 active:scale-95"
+                  type="button"
+                  onClick={dodajNadplate}
+                >
                   Dodaj
                 </button>
               </div>
@@ -286,7 +406,7 @@ export default function Strona() {
                   </select>
                   <button
                     aria-label="Usuń nadpłatę"
-                    className="h-8 rounded-md text-[#b2b6ca] hover:bg-white/5"
+                    className="h-8 rounded-md text-[#b2b6ca] transition-colors hover:bg-white/5 hover:text-[#e9e9ed] active:scale-90"
                     type="button"
                     onClick={() => usunNadplate(nadplata.id)}
                   >
@@ -299,11 +419,18 @@ export default function Strona() {
 
           <div className="border-t border-white/10 p-4">
             <button
-              className="flex h-10 w-full items-center justify-center rounded-md border border-[#9184d9] text-sm font-medium text-[#d2cefd] hover:bg-[#9184d9]/10 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-10 w-full items-center justify-center overflow-hidden px-2 text-center text-sm font-medium text-ellipsis whitespace-nowrap rounded-md border border-[#9184d9] text-[#d2cefd] transition-all hover:bg-[#9184d9]/10 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               disabled={ladowanie}
               type="submit"
             >
-              {ladowanie ? 'Liczenie...' : 'Policz'}
+              {ladowanie ? (
+                <span className="flex items-center gap-2">
+                  <span className="animacja-podskok-monety">🪙</span>
+                  {tekstLiczenia}
+                </span>
+              ) : (
+                'Policz'
+              )}
             </button>
           </div>
         </form>
@@ -323,7 +450,7 @@ export default function Strona() {
                 </PrzyciskSegmentu>
               </div>
               <button
-                className="rounded-md border border-white/15 px-3 py-2 text-sm hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-md border border-white/15 px-3 py-2 text-sm transition-all hover:bg-white/5 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
                 disabled={!wynik}
                 type="button"
                 onClick={eksportujCsv}
@@ -333,11 +460,11 @@ export default function Strona() {
             </div>
 
             {wynik ? (
-              <>
+              <div className="flex flex-col gap-3 animacja-wjazd-wynikow">
                 <div className="grid gap-px overflow-hidden rounded-lg bg-white/10 sm:grid-cols-3">
-                  <KafelekPodsumowania etykieta="Rata pierwsza" wartosc={formatujKwote(pierwszaRata?.rata ?? 0)} opis={pierwszaRata ? `Rata 1 · ${pierwszaRata.data}` : ''} />
-                  <KafelekPodsumowania etykieta="Rata ostatnia" wartosc={formatujKwote(ostatniaRata?.rata ?? 0)} opis={ostatniaRata ? `Rata ${ostatniaRata.numer} · ${ostatniaRata.data}` : ''} />
-                  <KafelekPodsumowania etykieta="Suma odsetek" wartosc={formatujKwote(wynik.sumaOdsetek)} opis={`Łącznie ${formatujKwote(sumaRat)}`} wyróżniony />
+                  <KafelekPodsumowania etykieta="Rata pierwsza" wartoscGrosze={pierwszaRata?.rata ?? 0} opis={pierwszaRata ? `Rata 1 · ${pierwszaRata.data}` : ''} />
+                  <KafelekPodsumowania etykieta="Rata ostatnia" wartoscGrosze={ostatniaRata?.rata ?? 0} opis={ostatniaRata ? `Rata ${ostatniaRata.numer} · ${ostatniaRata.data}` : ''} />
+                  <KafelekPodsumowania etykieta="Suma odsetek" wartoscGrosze={wynik.sumaOdsetek} opis={`Łącznie ${formatujKwote(sumaRat)}`} wyróżniony />
                 </div>
                 <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-[#b2b6ca]">
                   <span>
@@ -350,7 +477,8 @@ export default function Strona() {
                     Raty <strong className="font-medium text-[#e9e9ed]">{formularz.typRat === 'rowne' ? 'równe' : 'malejące'}</strong>
                   </span>
                 </div>
-              </>
+                <div className="text-[11px] text-[#9397ab]">{ciekawostkaOOdsetkach(wynik.sumaOdsetek)}</div>
+              </div>
             ) : null}
 
             {blad ? (
@@ -360,10 +488,12 @@ export default function Strona() {
             ) : null}
           </div>
 
-          {wynik ? (
+          {ladowanie ? (
+            <SzkieletTabeli />
+          ) : wynik ? (
             <div className="min-h-0 flex-1 overflow-auto">
               <table className="w-full min-w-[700px] border-collapse text-sm tabular-nums">
-                <thead className="sticky top-0 bg-[#232532] text-[11px] uppercase tracking-[0.08em] text-[#b2b6ca]">
+                <thead className="sticky top-0 bg-[#232532] text-[11px] uppercase tracking-[0.08em] text-[#b2b6ca] shadow-[0_6px_8px_-6px_rgba(0,0,0,0.5)]">
                   <tr>
                     <th className="w-24 px-3 py-3 text-right">{widok === 'roczny' ? 'Raty' : 'Nr'}</th>
                     <th className="px-3 py-3 text-left">{widok === 'roczny' ? 'Rok' : 'Data'}</th>
@@ -373,22 +503,34 @@ export default function Strona() {
                     <th className="px-3 py-3 text-right">Saldo</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {wiersze.map((wiersz) => (
-                    <tr className="border-t border-white/10" key={`${wiersz.numer}-${wiersz.data}`}>
-                      <td className="px-3 py-2 text-right text-[#b2b6ca]">{wiersz.numer}</td>
-                      <td className="px-3 py-2 text-[#cfd3e5]">{wiersz.data}</td>
-                      <td className="px-3 py-2 text-right">{formatujKwote(wiersz.kapital)}</td>
-                      <td className="px-3 py-2 text-right">{formatujKwote(wiersz.odsetki)}</td>
-                      <td className="px-3 py-2 text-right font-medium">{formatujKwote(wiersz.rata)}</td>
-                      <td className="px-3 py-2 text-right">{formatujKwote(wiersz.saldo)}</td>
-                    </tr>
-                  ))}
+                <tbody key={widok} className="animacja-zanikniecie-tabeli">
+                  {wiersze.map((wiersz, indeks) => {
+                    const ostatniWiersz = indeks === wiersze.length - 1;
+                    const maNadplate = wierszZawieraMiesiac(wiersz.numer, aktywneMiesiaceNadplat);
+                    return (
+                      <tr
+                        className={`border-t border-white/10 transition-colors hover:bg-white/[0.05] ${
+                          ostatniWiersz ? 'bg-[#3a3320]/50' : maNadplate ? 'bg-[#9184d9]/10' : ''
+                        } ${maNadplate ? 'border-l-2 border-l-[#9184d9]' : ''}`}
+                        key={`${wiersz.numer}-${wiersz.data}`}
+                      >
+                        <td className="px-3 py-2 text-right text-[#b2b6ca]">{wiersz.numer}</td>
+                        <td className="px-3 py-2 text-[#cfd3e5]">{wiersz.data}</td>
+                        <td className="px-3 py-2 text-right text-[#8fd9b6]">{formatujKwote(wiersz.kapital)}</td>
+                        <td className="px-3 py-2 text-right text-[#e8b273]">{formatujKwote(wiersz.odsetki)}</td>
+                        <td className="px-3 py-2 text-right font-medium">{formatujKwote(wiersz.rata)}</td>
+                        <td className={`px-3 py-2 text-right ${ostatniWiersz ? 'font-medium text-[#f0c98a]' : ''}`}>{formatujKwote(wiersz.saldo)}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           ) : (
-            <div className="m-4 rounded-lg border border-dashed border-white/15 p-10 text-sm text-[#b2b6ca]">Uzupełnij parametry i kliknij „Policz”.</div>
+            <div className="m-4 flex flex-col items-center gap-3 rounded-lg border border-dashed border-white/15 p-10 text-sm text-[#b2b6ca]">
+              <span className="animacja-bujanie-maskotki text-4xl">🧮</span>
+              Uzupełnij parametry i kliknij „Policz”.
+            </div>
           )}
 
           {zapytanie ? (
@@ -398,6 +540,30 @@ export default function Strona() {
           ) : null}
         </section>
       </div>
+
+      {konfetti.length > 0 ? (
+        <div className="pointer-events-none fixed inset-0 z-40 overflow-hidden" aria-hidden="true">
+          {konfetti.map((kawalek) => (
+            <span
+              className="animacja-konfetti absolute top-[-40px] text-2xl"
+              key={kawalek.id}
+              style={{ left: `${kawalek.lewo}%`, animationDelay: `${kawalek.opoznienie}s` }}
+            >
+              {kawalek.emoji}
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      {toast ? (
+        <div
+          className="animacja-wjazd-toastu fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-lg border border-white/15 bg-[#232532] px-4 py-3 text-sm text-[#e9e9ed] shadow-[0_8px_24px_rgba(0,0,0,0.4)]"
+          role="status"
+        >
+          <span className="text-[#9184d9]">✓</span>
+          {toast}
+        </div>
+      ) : null}
     </main>
   );
 }
@@ -414,7 +580,7 @@ function PoleEtykieta({ etykieta, children }: { etykieta: string; children: Reac
 function PrzyciskSegmentu({ aktywny, children, onClick }: { aktywny: boolean; children: React.ReactNode; onClick: () => void }) {
   return (
     <button
-      className={`px-3 py-2 text-center ${aktywny ? 'bg-[#9184d9]/15 text-[#d2cefd] shadow-[inset_0_0_0_1px_#9184d9]' : 'text-[#cfd3e5] hover:bg-white/5'}`}
+      className={`px-3 py-2 text-center transition-colors ${aktywny ? 'bg-[#9184d9]/15 text-[#d2cefd] shadow-[inset_0_0_0_1px_#9184d9]' : 'text-[#cfd3e5] hover:bg-white/5'}`}
       type="button"
       onClick={onClick}
     >
@@ -423,14 +589,43 @@ function PrzyciskSegmentu({ aktywny, children, onClick }: { aktywny: boolean; ch
   );
 }
 
-function KafelekPodsumowania({ etykieta, wartosc, opis, wyróżniony = false }: { etykieta: string; wartosc: string; opis: string; wyróżniony?: boolean }) {
+function KafelekPodsumowania({
+  etykieta,
+  wartoscGrosze,
+  opis,
+  wyróżniony = false,
+}: {
+  etykieta: string;
+  wartoscGrosze: number;
+  opis: string;
+  wyróżniony?: boolean;
+}) {
+  const animowanaWartosc = useAnimowanaWartosc(wartoscGrosze);
   return (
     <div className={`flex flex-col gap-1 bg-[#232532] p-3 ${wyróżniony ? 'shadow-[inset_0_-2px_0_#9184d9]' : ''}`}>
       <span className={`text-[11px] ${wyróżniony ? 'text-[#d2cefd]' : 'text-[#b2b6ca]'}`}>{etykieta}</span>
-      <span className="whitespace-nowrap text-xl font-medium tabular-nums">{wartosc}</span>
+      <span className="whitespace-nowrap text-xl font-medium tabular-nums">{formatujKwote(animowanaWartosc)}</span>
       <span className="text-[11px] text-[#9397ab]">{opis}</span>
     </div>
   );
+}
+
+function SzkieletTabeli() {
+  return (
+    <div className="flex flex-col gap-2 p-4">
+      {Array.from({ length: 8 }).map((_, indeks) => (
+        <div className="szkielet-wiersza h-8 rounded-md" key={indeks} />
+      ))}
+    </div>
+  );
+}
+
+function wierszZawieraMiesiac(numer: string, miesiace: number[]): boolean {
+  if (miesiace.length === 0) return false;
+  const [odTekst, doTekst] = numer.split('-');
+  const od = Number(odTekst);
+  const dokad = doTekst !== undefined ? Number(doTekst) : od;
+  return miesiace.some((miesiac) => miesiac >= od && miesiac <= dokad);
 }
 
 function formatujKwote(grosze: number): string {
