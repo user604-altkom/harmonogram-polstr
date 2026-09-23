@@ -144,13 +144,13 @@ export default function Strona() {
     if (!wynik) return;
     const wiersze = [
       ['Nr', 'Data', 'Kapitał', 'Odsetki', 'Rata', 'Saldo'],
-      ...wynik.raty.map((rata) => [
-        String(rata.numer),
-        rata.data,
-        formatujKwoteCsv(rata.czescKapitalowa),
-        formatujKwoteCsv(rata.czescOdsetkowa),
-        formatujKwoteCsv(rata.rata),
-        formatujKwoteCsv(rata.saldoPoSplacie),
+      ...wiersze.map((wiersz) => [
+        wiersz.numer,
+        wiersz.data,
+        formatujKwoteCsv(wiersz.kapital),
+        formatujKwoteCsv(wiersz.odsetki),
+        formatujKwoteCsv(wiersz.rata),
+        formatujKwoteCsv(wiersz.saldo),
       ]),
     ];
     const tresc = `\uFEFF${wiersze.map((wiersz) => wiersz.join(';')).join('\r\n')}`;
