@@ -148,3 +148,14 @@ Sprawdzenie produkcji po ponownym deployu:
 - API z nadpłatą `skrocOkres`: `HTTP 200`, 270 rat, pierwsza rata `249585` gr, ostatnia rata `150002` gr.
 
 Nie utworzono tagu `v0.1.0`, bo użytkownik poprosił o commit, push i deploy, bez tagowania wydania.
+
+Po commicie dokumentacyjnym wykonano jeszcze jeden deployment produkcyjny:
+
+- produkcyjny adres aplikacji: `https://harmonogram-polstr-szablon-main-five.vercel.app`,
+- adres konkretnego deploymentu: `https://harmonogram-polstr-szablon-main-bl8odvewl-akademia2.vercel.app`,
+- status builda: `Ready`.
+
+Końcowe sprawdzenie produkcji:
+
+- strona główna: `HTTP 200`,
+- API rat równych: `HTTP 200`, 300 rat, pierwsza rata `249585` gr, ostatnia rata `249775` gr.
