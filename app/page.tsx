@@ -142,7 +142,7 @@ export default function Strona() {
 
   function eksportujCsv() {
     if (!wynik) return;
-    const wiersze = [
+    const wierszeCsv = [
       ['Nr', 'Data', 'Kapitał', 'Odsetki', 'Rata', 'Saldo'],
       ...wiersze.map((wiersz) => [
         wiersz.numer,
@@ -153,7 +153,7 @@ export default function Strona() {
         formatujKwoteCsv(wiersz.saldo),
       ]),
     ];
-    const tresc = `\uFEFF${wiersze.map((wiersz) => wiersz.join(';')).join('\r\n')}`;
+    const tresc = `\uFEFF${wierszeCsv.map((wiersz) => wiersz.join(';')).join('\r\n')}`;
     const blob = new Blob([tresc], { type: 'text/csv;charset=utf-8' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);

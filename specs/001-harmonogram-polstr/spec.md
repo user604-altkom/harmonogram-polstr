@@ -155,6 +155,8 @@ sumę odsetek, tabelę rat oraz może pobrać CSV w przeglądarce.
   odsetkową, ratę i saldo po spłacie.
 - **FR-015**: Ekran www MUST mieć formularz parametrów, przycisk Policz, podsumowanie, tabelę
   rat i eksport CSV po stronie przeglądarki.
+- **FR-016**: Eksport CSV MUST używać wierszy z aktualnie aktywnego widoku tabeli (miesięczny albo
+  roczny) i MUST NOT rzucać błędem w czasie działania niezależnie od wybranego widoku.
 
 ### Key Entities *(include if feature involves data)*
 
