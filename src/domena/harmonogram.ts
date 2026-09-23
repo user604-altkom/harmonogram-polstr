@@ -43,13 +43,11 @@ export function policzHarmonogram(parametry: ParametryKredytu): WynikHarmonogram
   if (!pierwszyWpisSerii) {
     throw new Error('brak serii wskaźnika');
   }
-  if (parametry.typRat !== 'rowne') {
-    throw new Error(`nie zaimplementowano: typ rat ${parametry.typRat}`);
-  }
 
   const stopaRoczna = pierwszyWpisSerii.stopa + parametry.marza;
   const stopaMiesieczna = stopaRoczna / 12;
-  const rataBazowa = obliczRateRowna(parametry.kwotaGr, stopaMiesieczna, parametry.liczbaRat);
+  const kapitalMalejacy = zaokraglijDoGroszy(parametry.kwotaGr / parametry.liczbaRat);
+  const rataBazowa = parametry.typRat === 'rowne' ? obliczRateRowna(parametry.kwotaGr, stopaMiesieczna, parametry.liczbaRat) : 0;
 
   const raty: RataHarmonogramu[] = [];
   let saldo = parametry.kwotaGr;
@@ -59,7 +57,9 @@ export function policzHarmonogram(parametry: ParametryKredytu): WynikHarmonogram
     const data = dodajMiesiace(parametry.pierwszaRata, indeksRaty);
     const czescOdsetkowa = zaokraglijDoGroszy(saldo * stopaMiesieczna);
     const ostatniaRata = numer === parametry.liczbaRat;
-    const czescKapitalowa = ostatniaRata ? saldo : Math.min(saldo, rataBazowa - czescOdsetkowa);
+    const czescKapitalowa = parametry.typRat === 'rowne'
+      ? (ostatniaRata ? saldo : Math.min(saldo, rataBazowa - czescOdsetkowa))
+      : (ostatniaRata ? saldo : Math.min(saldo, kapitalMalejacy));
     saldo -= czescKapitalowa;
     const rata = czescKapitalowa + czescOdsetkowa;
 
