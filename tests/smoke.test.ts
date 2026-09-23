@@ -52,6 +52,24 @@ describe('domena', () => {
     expect(wynik.raty.at(-1)?.saldoPoSplacie).toBe(0);
   });
 
+  it('liczy raty malejące przy stałej stopie', () => {
+    const wynik = policzHarmonogram({
+      kwotaGr: 120_000_00,
+      liczbaRat: 3,
+      marza: 0,
+      typRat: 'malejace',
+      wskaznik: 'POLSTR_1M',
+      pierwszaRata: '2026-01-01',
+      seria: [{ od: '2026-01-01', stopa: 0.12 }],
+    });
+
+    expect(wynik.raty).toEqual([
+      { numer: 1, data: '2026-01-01', czescKapitalowa: 4_000_000, czescOdsetkowa: 120_000, rata: 4_120_000, saldoPoSplacie: 8_000_000 },
+      { numer: 2, data: '2026-02-01', czescKapitalowa: 4_000_000, czescOdsetkowa: 80_000, rata: 4_080_000, saldoPoSplacie: 4_000_000 },
+      { numer: 3, data: '2026-03-01', czescKapitalowa: 4_000_000, czescOdsetkowa: 40_000, rata: 4_040_000, saldoPoSplacie: 0 },
+    ]);
+  });
+
   it('testy działają w strefie Europe/Warsaw', () => {
     expect(process.env.TZ).toBe('Europe/Warsaw');
   });
