@@ -92,3 +92,59 @@ Deployment został wykonany z aktualnego lokalnego stanu gałęzi `spec-mvp`. W 
 Vercel zgłosił problem z połączeniem projektu z repozytorium GitHub podczas deploymentu tymczasowego. Oznacza to, że automatyczne deploye z pushy do GitHuba mogą wymagać ręcznego podłączenia repozytorium w panelu Vercel.
 
 Nie wykonano commita, PR-a ani tagu `v0.1.0`.
+
+## Publikacja na GitHub i ponowny deploy
+
+Po domknięciu wymagań MVP wykonano lokalną walidację:
+
+```powershell
+npm test
+npm run typecheck
+npm run build
+```
+
+Wynik:
+
+- `npm test`: OK, 10/10 testów,
+- `npm run typecheck`: OK,
+- `npm run build`: OK.
+
+Utworzono commit:
+
+```text
+2bd416c mvp: harmonogram kredytu i frontend z deployem
+```
+
+Wypchnięto gałąź na GitHub:
+
+```text
+origin/spec-mvp
+```
+
+Adres utworzenia PR:
+
+```text
+https://github.com/user604-altkom/harmonogram-polstr/pull/new/spec-mvp
+```
+
+Następnie wykonano ponowny deployment produkcyjny:
+
+```powershell
+npx --yes vercel@latest --prod --yes
+```
+
+Wynik:
+
+- produkcyjny adres aplikacji: `https://harmonogram-polstr-szablon-main-five.vercel.app`,
+- adres konkretnego deploymentu: `https://harmonogram-polstr-szablon-main-cb5fxglgg-akademia2.vercel.app`,
+- status builda: `Ready`,
+- brak błędów i ostrzeżeń blokujących.
+
+Sprawdzenie produkcji po ponownym deployu:
+
+- strona główna: `HTTP 200`,
+- API rat równych: `HTTP 200`, 300 rat, pierwsza rata `249585` gr, ostatnia rata `249775` gr,
+- API rat malejących: `HTTP 200`, 3 raty, pierwsza rata `4041500` gr, ostatnia rata `4013000` gr,
+- API z nadpłatą `skrocOkres`: `HTTP 200`, 270 rat, pierwsza rata `249585` gr, ostatnia rata `150002` gr.
+
+Nie utworzono tagu `v0.1.0`, bo użytkownik poprosił o commit, push i deploy, bez tagowania wydania.
