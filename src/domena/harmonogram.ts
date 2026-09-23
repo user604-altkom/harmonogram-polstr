@@ -39,22 +39,26 @@ export function przeliczZloteNaGrosze(kwotaZl: number): number {
 }
 
 export function policzHarmonogram(parametry: ParametryKredytu): WynikHarmonogramu {
-  const pierwszyWpisSerii = parametry.seria?.[0];
-  if (!pierwszyWpisSerii) {
+  if (!parametry.seria || parametry.seria.length === 0) {
     throw new Error('brak serii wskaźnika');
   }
 
-  const stopaRoczna = pierwszyWpisSerii.stopa + parametry.marza;
-  const stopaMiesieczna = stopaRoczna / 12;
-  const kapitalMalejacy = zaokraglijDoGroszy(parametry.kwotaGr / parametry.liczbaRat);
-  const rataBazowa = parametry.typRat === 'rowne' ? obliczRateRowna(parametry.kwotaGr, stopaMiesieczna, parametry.liczbaRat) : 0;
-
   const raty: RataHarmonogramu[] = [];
   let saldo = parametry.kwotaGr;
+  let poprzedniaStopaMiesieczna: number | undefined;
+  let rataBazowa = 0;
+  const kapitalMalejacy = zaokraglijDoGroszy(parametry.kwotaGr / parametry.liczbaRat);
 
   for (let indeksRaty = 0; indeksRaty < parametry.liczbaRat && saldo > 0; indeksRaty++) {
     const numer = indeksRaty + 1;
     const data = dodajMiesiace(parametry.pierwszaRata, indeksRaty);
+    const stopaRoczna = stopaDlaDaty(parametry.seria, data) + parametry.marza;
+    const stopaMiesieczna = stopaRoczna / 12;
+    const pozostaleRaty = parametry.liczbaRat - indeksRaty;
+    if (parametry.typRat === 'rowne' && poprzedniaStopaMiesieczna !== stopaMiesieczna) {
+      rataBazowa = obliczRateRowna(saldo, stopaMiesieczna, pozostaleRaty);
+      poprzedniaStopaMiesieczna = stopaMiesieczna;
+    }
     const czescOdsetkowa = zaokraglijDoGroszy(saldo * stopaMiesieczna);
     const ostatniaRata = numer === parametry.liczbaRat;
     const czescKapitalowa = parametry.typRat === 'rowne'
@@ -70,6 +74,23 @@ export function policzHarmonogram(parametry: ParametryKredytu): WynikHarmonogram
     raty,
     sumaOdsetek: raty.reduce((suma, rata) => suma + rata.czescOdsetkowa, 0),
   };
+}
+
+function stopaDlaDaty(seria: readonly WpisSerii[], data: string): number {
+  const pierwsza = seria[0];
+  if (!pierwsza || pierwsza.od > data) {
+    throw new Error('brak wartości wskaźnika dla daty');
+  }
+  let znalezionaStopa = pierwsza.stopa;
+
+  for (const wpis of seria) {
+    if (wpis.od > data) {
+      break;
+    }
+    znalezionaStopa = wpis.stopa;
+  }
+
+  return znalezionaStopa;
 }
 
 function obliczRateRowna(saldo: number, stopaMiesieczna: number, liczbaRat: number): number {
