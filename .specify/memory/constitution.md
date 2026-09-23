@@ -1,50 +1,68 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report
+Version change: initial template -> 1.0.0
+Modified principles: placeholder principles -> project governance principles
+Added sections: Ograniczenia techniczne, Proces pracy
+Removed sections: none
+Follow-up TODOs: none
+-->
+
+# Konstytucja projektu Harmonogram POLSTR
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Czysta domena obliczeniowa
+Cała logika obliczania harmonogramu MUST znajdować się w `src/domena/` jako czyste
+funkcje TypeScript. Kod domenowy MUST NOT zależeć od React, Next.js, I/O, zegara systemowego
+ani efektów ubocznych. Route handler i ekran mogą tylko przekazywać dane do domeny i prezentować
+wynik.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. Testy przed logiką obliczeń
+Każda zmiana logiki obliczeń MUST mieć test vitest z konkretną liczbą kontrolną. Testy domeny
+i danych MUST mieszkać w `tests/`. Dla nowych reguł obliczeniowych najpierw powstaje test,
+potem implementacja, a brak testu dla zmiany obliczeń jest błędem procesu.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. Jawne pieniądze i zaokrąglenia
+Kwoty MUST być przetwarzane jako grosze albo w innym jawnie opisanym modelu z jednym miejscem
+zaokrąglania do grosza. Ostatnia rata MUST wyrównać kapitał tak, aby suma części kapitałowych
+była równa kwocie kredytu. Dodatkowe zaokrąglenia tej samej wielkości są niedopuszczalne.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. Cienkie granice aplikacji
+`app/api/harmonogram/route.ts` MUST tylko parsować query string, walidować podstawowy kształt
+danych, wywoływać funkcje z domeny i zwracać JSON. `app/page.tsx` MUST być komponentem
+`'use client'`, używać Tailwind i pobierać dane przez `/api/harmonogram`. Żadna z tych warstw
+nie może liczyć harmonogramu.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### V. Prostota i zgodność ze szkieletem
+Projekt MUST używać Next.js App Router, TypeScript strict, vitest i Tailwind zgodnie z istniejącym
+szkieletem. Nowe zależności są zabronione bez wcześniejszego uzasadnienia i decyzji. Nazwy
+domenowe, dokumenty, komentarze i komunikaty commitów piszemy po polsku, bez skrótów w nazwach.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## Ograniczenia techniczne
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+- Dane wskaźników są w `dane/` i są wczytywane przez `src/dane/wskazniki.ts`.
+- Plików w `dane/` nie edytujemy bez wyraźnego polecenia.
+- POLSTR 1M zmienia się co miesiąc, WIBOR 3M co kwartał.
+- Po ostatnim wpisie serii obowiązuje ostatnia znana wartość.
+- MVP używa wartości wskaźnika wprost z danych i nie składa dziennych stawek POLSTR.
+- Odsetki są proste w okresie: saldo razy stopa roczna dzielona przez 12.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+## Proces pracy
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+- Pracujemy fazami według `tasks.md`.
+- Każda faza implementacji trafia do osobnej gałęzi i osobnego PR.
+- Po zakończeniu fazy uruchamiamy `npm test`, `npm run typecheck` i `npm run build`.
+- PR powinien przejść review Copilota albo rutynę review z `skrypty/review-pr.ps1`.
+- Po zakończeniu fazy agent zatrzymuje się i pokazuje diff zamiast zaczynać kolejną fazę.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+Konstytucja jest nadrzędna wobec decyzji implementacyjnych dla tego projektu. Zmiana zasad
+wymaga aktualizacji tego pliku, wskazania wpływu na istniejące artefakty spec-kit oraz ponownej
+walidacji planu i zadań. Zgodność z konstytucją sprawdzamy przy generowaniu planu, tasks.md,
+implementacji i review PR.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+Wersjonowanie konstytucji używa semver: MAJOR dla zmian niezgodnych, MINOR dla nowych zasad,
+PATCH dla doprecyzowań bez zmiany znaczenia.
+
+**Version**: 1.0.0 | **Ratified**: 2026-09-23 | **Last Amended**: 2026-09-23
